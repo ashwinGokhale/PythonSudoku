@@ -1,8 +1,10 @@
+# Modified code from http://newcoder.io/gui/
+
 import argparse
 
 from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM
 
-BOARDS = ['debug', 'n00b', 'l33t', 'error']  # Available sudoku boards
+BOARDS = ['debug', 'easy', 'hard', 'error']  # Available sudoku boards
 MARGIN = 20  # Pixels around the board
 SIDE = 50  # Width of every board cell.
 WIDTH = HEIGHT = MARGIN * 2 + SIDE * 9  # Width and height of the whole board
@@ -135,11 +137,8 @@ class SudokuUI(Frame):
             # get row and col numbers from x,y coordinates
             row, col = int((y - MARGIN) / SIDE), int((x - MARGIN) / SIDE)
 
-            # if cell was selected already - deselect it
-            if (row, col) == (self.row, self.col):
-                self.row, self.col = -1, -1
-            elif self.game.puzzle[row][col] == 0:
-                self.row, self.col = row, col
+            # Set the row and column
+            self.row, self.col = row, col
         else:
             self.row, self.col = -1, -1
 
