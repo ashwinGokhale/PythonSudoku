@@ -5,27 +5,27 @@
 
 ---
 
-Usage:
+### Usage:
 
-##### Generate Random Sudoku game
+#### Generate Random Sudoku game
     python3 pydoku.py
 
-##### Set difficulty
+#### Set difficulty
     python3 pydoku.py -d [easy, medium, hard]
 
-##### Load board from file
+#### Load board from file
     python3 pydoku.py -b [easy, medium, hard, etc...]
 
 ---
 
-##### Difficulty:
+#### Difficulty:
     easy: 32+ clues (49 or fewer holes)
     medium: 27-31 clues (50-54 holes)
     hard: 26 or fewer clues (54+ holes)
 
 ---
 
-##### Based on code from:
+#### Based on code from:
 
    GUI: http://newcoder.io/gui/
 
