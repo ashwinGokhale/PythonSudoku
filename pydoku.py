@@ -6,6 +6,7 @@
 
 import argparse
 import random
+from copy import deepcopy
 from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM
 
 import numpy as np
@@ -107,7 +108,7 @@ class SudokuUI(Frame):
         self.canvas.delete("numbers")
         for i in range(9):
             for j in range(9):
-                answer = self.game.puzzle[i][j]
+                answer = self.game.board.board[i][j]
                 if answer != 0:
                     x = MARGIN + j * SIDE + SIDE / 2
                     y = MARGIN + i * SIDE + SIDE / 2
@@ -166,7 +167,8 @@ class SudokuUI(Frame):
         if self.game.game_over:
             return
         if self.row >= 0 and self.col >= 0 and event.char in "1234567890":
-            self.game.puzzle[self.row][self.col].setAnswer(int(event.char))
+            self.game.board.board[self.row][self.col] = self.game.board.board[self.row][self.col]
+            self.game.board.board[self.row][self.col].setAnswer(int(event.char))
             self.col, self.row = -1, -1
             self.__draw_puzzle()
             self.__draw_cursor()
@@ -185,7 +187,7 @@ class SudokuBoard(object):
     """
 
     def __init__(self, board_file="None.sudoku", difficulty="easy"):
-        if board_file.name == "None.sudoku":
+        if board_file.name == "./boards/None.sudoku":
             self.board = self.generateBoard()
             while not self.checkWin():
                 self.board = self.generateBoard()
@@ -360,18 +362,19 @@ class SudokuGame(object):
     whether the puzzle is completed.
     """
 
-    def __init__(self, board_file, difficulty="easy"):
+    def __init__(self, board_file="./boards/None.sudoku", difficulty="easy"):
         self.board_file = board_file
         self.board = SudokuBoard(board_file, difficulty)
-        self.start_puzzle = self.board.board
+        self.start_puzzle = deepcopy(self.board.board)
 
     def start(self):
         self.game_over = False
-        self.puzzle = []
         for i in range(9):
-            self.puzzle.append([])
             for j in range(9):
-                self.puzzle[i].append(self.start_puzzle[i][j])
+                if self.start_puzzle[i][j].answer != 0:
+                    self.board.board[i][j] = self.start_puzzle[i][j]
+                else:
+                    self.board.board[i][j] = deepcopy(self.start_puzzle[i][j])
 
 
 class Cell(object):
@@ -418,7 +421,7 @@ if __name__ == '__main__':
     board_name = args[0] if args[0] else 'None'
     difficulty = args[1] if args[1] else 'easy'
     with open('./boards/%s.sudoku' % board_name, 'r') as boards_file:
-        game = SudokuGame(boards_file, difficulty)
+        game = SudokuGame(board_file=boards_file, difficulty=difficulty)
         game.start()
         root = Tk()
         SudokuUI(root, game)
