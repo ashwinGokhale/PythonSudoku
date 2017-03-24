@@ -170,7 +170,7 @@ class SudokuUI(Frame):
             self.col, self.row = -1, -1
             self.__draw_puzzle()
             self.__draw_cursor()
-            if self.game.board.check_win():
+            if self.game.board.checkWin():
                 self.__draw_victory()
 
     def __clear_answers(self):
@@ -187,14 +187,14 @@ class SudokuBoard(object):
     def __init__(self, board_file="None.sudoku", difficulty="easy"):
         if board_file.name == "None.sudoku":
             self.board = self.generateBoard()
-            while not self.check_win():
+            while not self.checkWin():
                 self.board = self.generateBoard()
 
             self.makeHoles(difficulty)
         else:
             self.board = self.__create_from_file(board_file)
 
-    def check_win(self):
+    def checkWin(self):
         for row in range(9):
             if not self.__check_row(row):
                 return False
@@ -288,6 +288,7 @@ class SudokuBoard(object):
 
         if len(board) != 9:
             raise SudokuError("Each sudoku puzzle must be 9 lines long")
+
         return board
 
     def generateBoard(self):
