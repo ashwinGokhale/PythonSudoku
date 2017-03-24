@@ -166,7 +166,7 @@ class SudokuUI(Frame):
         if self.game.game_over:
             return
         if self.row >= 0 and self.col >= 0 and event.char in "1234567890":
-            self.game.puzzle[self.row][self.col] = int(event.char)
+            self.game.puzzle[self.row][self.col].setAnswer(int(event.char))
             self.col, self.row = -1, -1
             self.__draw_puzzle()
             self.__draw_cursor()
@@ -416,7 +416,7 @@ if __name__ == '__main__':
     args = parse_arguments()
     board_name = args[0] if args[0] else 'None'
     difficulty = args[1] if args[1] else 'easy'
-    with open('%s.sudoku' % board_name, 'r') as boards_file:
+    with open('./boards/%s.sudoku' % board_name, 'r') as boards_file:
         game = SudokuGame(boards_file, difficulty)
         game.start()
         root = Tk()
