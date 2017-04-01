@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Modified code from:
 #   http://newcoder.io/gui/
@@ -164,8 +164,12 @@ class SudokuUI(Frame):
         self.__draw_cursor()
 
     def __key_pressed(self, event):
-        if self.game.game_over:
+        # Do nothing if game over or trying to change black number
+        if self.game.game_over or self.game.board.board[self.row][self.col] == self.game.start_puzzle[self.row][
+            self.col]:
             return
+
+        # Otherwise, if char is a number, assign it in the board and redraw
         if self.row >= 0 and self.col >= 0 and event.char in "1234567890":
             self.game.board.board[self.row][self.col] = self.game.board.board[self.row][self.col]
             self.game.board.board[self.row][self.col].setAnswer(int(event.char))
