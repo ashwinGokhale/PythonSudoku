@@ -7,22 +7,25 @@
 import argparse
 import random
 from copy import deepcopy
-from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM
+from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM, Menu, filedialog
+from tkinter.filedialog import asksaveasfile
 
 import numpy as np
 
 BOARDS = ['debug', 'easy', 'hard', 'error', 'etc...']  # Available sudoku boards
 DIFFICULTIES = ['easy', 'medium', 'hard']
-MARGIN = 20  # Pixels around the board
+MARGIN = 30  # Pixels around the board
 SIDE = 50  # Width of every board cell.
 WIDTH = HEIGHT = MARGIN * 2 + SIDE * 9  # Width and height of the whole board
 
 
 class SudokuError(Exception):
-    """
-    An application specific error.
-    """
-    pass
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
+        self.value = args[0]
+
+    def __str__(self):
+        return self.value.encode('string_escape')
 
 
 def parse_arguments():
@@ -60,23 +63,49 @@ class SudokuUI(Frame):
 
     def __init__(self, parent, game):
         self.game = game
+        self.game.start()
         Frame.__init__(self, parent)
         self.parent = parent
-
         self.row, self.col = -1, -1
-
         self.__initUI()
+
+    def new_board(self, board=None, difficulty='easy'):
+        print('Creating new board with difficulty of {}'.format(difficulty))
+        self.game = SudokuGame(board, difficulty)
+        self.game.start()
+        self.row, self.col = -1, -1
+        Frame.destroy(self)
+        Frame.__init__(self, self.parent)
+        self.__initUI()
+
+    def open_board(self):
+        f = filedialog.askopenfilename()
+        if f is not None:
+            self.new_board(open(f, 'r'))
+            if self.game.board.checkWin():
+                self.__draw_victory()
+
+    def save_board(self):
+        f = asksaveasfile(mode='w', defaultextension=".board")
+        if f is not None:
+            board = self.game.board.serialize()
+            f.write(board)
+            f.close()
+
+    def give_up(self):
+        self.game.board.board = self.game.board.solved_board
+        self.__draw_puzzle()
+        self.__draw_loss()
+
 
     def __initUI(self):
         self.parent.title("Pydoku")
         self.pack(fill=BOTH)
-        self.canvas = Canvas(self,
-                             width=WIDTH,
-                             height=HEIGHT)
+        give_up_button = Button(self, text="I give up", command=self.give_up)
+        give_up_button.pack(fill=BOTH, side=TOP)
+        self.canvas = Canvas(self, width=WIDTH, height=HEIGHT)
         self.canvas.pack(fill=BOTH, side=TOP)
-        clear_button = Button(self,
-                              text="Clear answers",
-                              command=self.__clear_answers)
+        clear_button = Button(self, text="Clear answers", command=self.__clear_answers)
         clear_button.pack(fill=BOTH, side=BOTTOM)
 
         self.__draw_grid()
@@ -84,6 +113,21 @@ class SudokuUI(Frame):
 
         self.canvas.bind("<Button-1>", self.__cell_clicked)
         self.canvas.bind("<Key>", self.__key_pressed)
+
+        """ 
+        Add menu items to the parent 
+        """
+        menu = Menu(root)
+        file_menu = Menu(menu)
+        difficulty_options = Menu(file_menu)
+        difficulty_options.add_command(label='Easy', command=lambda: self.new_board(None, 'easy'))
+        difficulty_options.add_command(label='Medium', command=lambda: self.new_board(None, 'medium'))
+        difficulty_options.add_command(label='Hard', command=lambda: self.new_board(None, 'hard'))
+        file_menu.add_cascade(label="New", menu=difficulty_options)
+        file_menu.add_command(label="Open", command=self.open_board)
+        file_menu.add_command(label="Save", command=self.save_board)
+        menu.add_cascade(label="File", menu=file_menu)
+        self.parent.config(menu=menu)
 
     def __draw_grid(self):
         """
@@ -136,13 +180,29 @@ class SudokuUI(Frame):
         x1 = y1 = MARGIN + SIDE * 7
         self.canvas.create_oval(
             x0, y0, x1, y1,
-            tags="victory", fill="dark orange", outline="orange"
+            tags="victory", fill="green", outline="orange"
         )
         # create text
         x = y = MARGIN + 4 * SIDE + SIDE / 2
         self.canvas.create_text(
             x, y,
             text="You win!", tags="victory",
+            fill="white", font=("Arial", 32)
+        )
+
+    def __draw_loss(self):
+        # create a oval (which will be a circle)
+        x0 = y0 = MARGIN + SIDE * 2
+        x1 = y1 = MARGIN + SIDE * 7
+        self.canvas.create_oval(
+            x0, y0, x1, y1,
+            tags="loss", fill="red", outline="red"
+        )
+        # create text
+        x = y = MARGIN + 4 * SIDE + SIDE / 2
+        self.canvas.create_text(
+            x, y,
+            text="You Lose!\n      =(", tags="loss",
             fill="white", font=("Arial", 32)
         )
 
@@ -182,6 +242,7 @@ class SudokuUI(Frame):
     def __clear_answers(self):
         self.game.start()
         self.canvas.delete("victory")
+        self.canvas.delete("loss")
         self.__draw_puzzle()
 
 
@@ -190,12 +251,12 @@ class SudokuBoard(object):
     Sudoku Board representation
     """
 
-    def __init__(self, board_file="None.sudoku", difficulty="easy"):
-        if board_file.name == "./boards/None.sudoku":
+    def __init__(self, board_file, difficulty="easy"):
+        if not board_file:
             self.board = self.generateBoard()
             while not self.checkWin():
                 self.board = self.generateBoard()
-
+            self.solved_board = deepcopy(self.board)
             self.makeHoles(difficulty)
         else:
             self.board = self.__create_from_file(board_file)
@@ -350,14 +411,23 @@ class SudokuBoard(object):
 
                 squaresLeft -= 1
 
-    def printBoard(self):
-        '''Prints out a sudoku in a format that is easy for a human to read'''
+    def serialize_matrix(self, board):
+        '''Converts board to a 9x9 numpy matrix'''
         rows = [[0 for i in range(9)] for j in range(9)]
         for i in range(9):
             for j in range(9):
-                rows[i][j] = (self.board[i][j].answer)
+                rows[i][j] = (board[i][j].answer)
+        return rows
 
-        print(np.matrix(rows))
+    def serialize(self):
+        '''Converts 9x9 numpy matrix board to a string that can be written to a file'''
+        return '\n'.join([''.join(map(str, i)) for i in self.serialize_matrix(self.board)])
+
+    def printBoard(self, board):
+        '''Prints out a sudoku in a format that is easy for a human to read'''
+        print(np.matrix(self.serialize_matrix(board)))
+
+
 
 
 class SudokuGame(object):
@@ -366,7 +436,7 @@ class SudokuGame(object):
     whether the puzzle is completed.
     """
 
-    def __init__(self, board_file="./boards/None.sudoku", difficulty="easy"):
+    def __init__(self, board_file, difficulty="easy"):
         self.board_file = board_file
         self.board = SudokuBoard(board_file, difficulty)
         self.start_puzzle = deepcopy(self.board.board)
@@ -419,15 +489,12 @@ class Cell(object):
     def __str__(self):
         return '{}'.format(self.answer)
 
-
 if __name__ == '__main__':
     args = parse_arguments()
-    board_name = args[0] if args[0] else 'None'
+    board_name = args[0] if args[0] else None
     difficulty = args[1] if args[1] else 'easy'
-    with open('./boards/%s.sudoku' % board_name, 'r') as boards_file:
-        game = SudokuGame(board_file=boards_file, difficulty=difficulty)
-        game.start()
-        root = Tk()
-        SudokuUI(root, game)
-        root.geometry("%dx%d" % (WIDTH, HEIGHT + 40))
-        root.mainloop()
+    game = SudokuGame(board_name, difficulty)
+    root = Tk()
+    SudokuUI(root, game)
+    root.geometry("%dx%d" % (WIDTH, HEIGHT + 70))
+    root.mainloop()
