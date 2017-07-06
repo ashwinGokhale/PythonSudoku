@@ -70,7 +70,6 @@ class SudokuUI(Frame):
         self.__initUI()
 
     def new_board(self, board=None, difficulty='easy'):
-        print('Creating new board with difficulty of {}'.format(difficulty))
         self.game = SudokuGame(board, difficulty)
         self.game.start()
         self.row, self.col = -1, -1
