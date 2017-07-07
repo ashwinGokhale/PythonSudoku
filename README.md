@@ -28,6 +28,7 @@
 #### TODO:  
 - [ ] Implement a solver for loading custom boards from a file
 
+---
 
 #### Based on code from:
 
